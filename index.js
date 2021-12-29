@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
   res.json({'message': 'ok'});
 })
 
-app.use('/generate', generateRouter);
+app.use('/v1', generateRouter);
 
 // app.get("/generate", (req, res) => {
 //     const dna = generateOne();
