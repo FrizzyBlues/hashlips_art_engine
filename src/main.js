@@ -1,6 +1,7 @@
 const basePath = process.cwd();
 const { NETWORK } = require(`${basePath}/constants/network.js`);
 const fs = require("fs");
+const { exit } = require("process");
 const sha1 = require(`${basePath}/node_modules/sha1`);
 const { createCanvas, loadImage } = require(`${basePath}/node_modules/canvas`);
 const buildDir = `${basePath}/build`;
@@ -42,6 +43,17 @@ const buildSetup = () => {
   fs.mkdirSync(`${buildDir}/images`);
   if (gif.export) {
     fs.mkdirSync(`${buildDir}/gifs`);
+  }
+};
+
+const buildSetupV2 = () => {
+  if (!fs.existsSync(buildDir)) {
+    fs.mkdirSync(buildDir);
+    fs.mkdirSync(`${buildDir}/json`);
+    fs.mkdirSync(`${buildDir}/images`);
+    if (gif.export) {
+      fs.mkdirSync(`${buildDir}/gifs`);
+    }
   }
 };
 
@@ -403,7 +415,7 @@ const startCreating = async () => {
             )}`
           );
         });
-        dnaList.add(filterDNAOptions(newDna));
+        // dnaList.add(filterDNAOptions(newDna));
         editionCount++;
         abstractedIndexes.shift();
       } else {
@@ -422,4 +434,76 @@ const startCreating = async () => {
   writeMetaData(JSON.stringify(metadataList, null, 2));
 };
 
-module.exports = { startCreating, buildSetup, getElements };
+const getRandomLayers = () => {
+  let layerConfigIndex = 0;
+  const layers = layersSetup(layerConfigurations[layerConfigIndex].layersOrder);
+  return layers;
+}
+
+const createRandomArt = async (newDna, layers) => {
+  let uuidName = sha1(newDna);
+  let results = constructLayerToDna(newDna, layers);
+    let loadedElements = [];
+
+    results.forEach((layer) => {
+      loadedElements.push(loadLayerImg(layer));
+    });
+
+    await Promise.all(loadedElements).then((renderObjectArray) => {
+      debugLogs ? console.log("Clearing canvas") : null;
+      ctx.clearRect(0, 0, format.width, format.height);
+      if (gif.export) {
+        hashlipsGiffer = new HashlipsGiffer(
+          canvas,
+          ctx,
+          `${buildDir}/gifs/${uuidName}.gif`,
+          gif.repeat,
+          gif.quality,
+          gif.delay
+        );
+        hashlipsGiffer.start();
+      }
+      if (background.generate) {
+        drawBackground();
+      }
+      renderObjectArray.forEach((renderObject, index) => {
+        drawElement(
+          renderObject,
+          index,
+          layerConfigurations[0].layersOrder.length
+        );
+        if (gif.export) {
+          hashlipsGiffer.add();
+        }
+      });
+      if (gif.export) {
+        hashlipsGiffer.stop();
+      }
+      saveImage(uuidName);
+      addMetadata(newDna, uuidName);
+      saveMetaDataSingleFile(uuidName);
+      console.log(`Created edition with DNA: ${uuidName}`);
+    });
+}
+
+const isNewDnaUnique = (newDna) => {
+  let isDnaUnique = false;
+  var existingDnaText = fs.readFileSync('./constants/dnaList.txt', 'utf-8');
+  // console.log(`Existing DNA text during check: ${existingDnaText}`);
+  var existingDnaList = existingDnaText.split("\n");
+  if(!existingDnaList.includes(newDna)) {
+    isDnaUnique = true;
+  } 
+  return isDnaUnique;
+}
+
+const addToExistingDnaList = (newDna) => {
+  var existingDnaText = fs.readFileSync('./constants/dnaList.txt', 'utf-8');
+  // console.log(`Existing DNA text during update: ${existingDnaText}`);
+  var existingDnaList = existingDnaText.split("\n");
+  existingDnaList.push(newDna);
+  let updatedDnaText = existingDnaList.join('\n');
+  fs.writeFileSync('./constants/dnaList.txt', updatedDnaText, "utf8");
+};
+
+module.exports = { startCreating, buildSetup, getElements, getRandomLayers, createRandomArt, createDna, buildSetupV2, isNewDnaUnique, addToExistingDnaList };
