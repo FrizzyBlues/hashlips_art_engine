@@ -284,7 +284,7 @@ const isDnaUnique = (_DnaList = new Set(), _dna = "") => {
   return !_DnaList.has(_filteredDNA);
 };
 
-const createDna = (_layers) => {
+const createDna = async (_layers) => {
   let randNum = [];
   _layers.forEach((layer) => {
     var totalWeight = 0;
@@ -434,7 +434,7 @@ const startCreating = async () => {
   writeMetaData(JSON.stringify(metadataList, null, 2));
 };
 
-const getRandomLayers = () => {
+const getRandomLayers = async () => {
   let layerConfigIndex = 0;
   const layers = layersSetup(layerConfigurations[layerConfigIndex].layersOrder);
   return layers;
